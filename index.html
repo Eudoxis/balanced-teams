@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team Maker</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom font Inter */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5; /* Light gray background */
+        }
+        /* Custom styles for the message box */
+        #messageBox {
+            display: none; /* Hidden by default */
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #fff;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            max-width: 90%;
+            text-align: center;
+        }
+        #messageBoxOverlay {
+            display: none; /* Hidden by default */
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.4);
+            z-index: 999;
+        }
+        /* Style for better mobile touch targets */
+        input[type="number"], input[type="text"] {
+            padding: 10px 12px;
+        }
+        button {
+            padding: 12px 20px;
+        }
+        label {
+            cursor: pointer;
+        }
+        /* Styles for star rating */
+        .star-rating .star-icon {
+            font-size: 1.5rem; /* Larger stars */
+            cursor: pointer;
+            color: #d1d5db; /* Default grey for unselected stars */
+            transition: color 0.2s;
+        }
+        .star-rating .star-icon.filled {
+            color: #f59e0b; /* Yellow for filled stars */
+        }
+        .star-rating .star-icon:hover {
+            color: #fbbf24; /* Lighter yellow on hover */
+        }
+        .star-rating .star-icon:hover ~ .star-icon {
+            color: #d1d5db; /* Reset color for stars after hovered star */
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen flex items-center justify-center p-4">
+
+    <div class="bg-white rounded-3xl shadow-xl p-6 md:p-10 max-w-4xl w-full">
+        <h1 class="text-3xl md:text-4xl font-bold text-center text-gray-800 mb-8">Team Maker</h1>
+
+        <!-- Input Section -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <!-- Number of Participants -->
+            <div class="flex flex-col">
+                <label for="numParticipants" class="block text-gray-700 text-lg font-medium mb-2">Number of Participants:</label>
+                <input type="number" id="numParticipants" value="5" min="1" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 text-lg">
+            </div>
+
+            <!-- Number of Teams -->
+            <div class="flex flex-col">
+                <label for="numTeams" class="block text-gray-700 text-lg font-medium mb-2">Number of Teams:</label>
+                <input type="number" id="numTeams" value="2" min="1" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 text-lg">
+            </div>
+        </div>
+
+        <!-- Mode Selection -->
+        <div class="mb-8">
+            <h2 class="text-xl md:text-2xl font-semibold text-gray-800 mb-4">Select Mode:</h2>
+            <div class="flex flex-col sm:flex-row gap-4">
+                <div class="flex items-center">
+                    <input type="radio" id="randomMode" name="mode" value="random" checked class="form-radio h-5 w-5 text-blue-600">
+                    <label for="randomMode" class="ml-2 text-gray-700 text-lg">Random Teams</label>
+                </div>
+                <div class="flex items-center">
+                    <input type="radio" id="balancedMode" name="mode" value="balanced" class="form-radio h-5 w-5 text-blue-600">
+                    <label for="balancedMode" class="ml-2 text-gray-700 text-lg">Balanced Teams (with skill ratings)</label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Participant Inputs (Dynamic) -->
+        <div id="participantInputs" class="mb-8 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+            <!-- Participant fields will be injected here by JavaScript -->
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex flex-col sm:flex-row justify-center gap-4 mb-8">
+            <button id="generateTeamsBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl shadow-lg transform transition-transform duration-200 hover:scale-105">
+                Generate Teams
+            </button>
+            <button id="resetBtn" class="bg-gray-400 hover:bg-gray-500 text-white font-bold py-3 px-6 rounded-xl shadow-lg transform transition-transform duration-200 hover:scale-105">
+                Reset
+            </button>
+        </div>
+
+        <!-- Teams Output -->
+        <div id="teamsOutput" class="bg-gray-50 p-6 rounded-2xl shadow-inner min-h-[150px]">
+            <h2 class="text-xl md:text-2xl font-semibold text-gray-800 mb-4 text-center">Your Teams:</h2>
+            <div id="teamsList" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Generated teams will appear here -->
+                <p class="text-center text-gray-500 italic">No teams generated yet. Enter details and click "Generate Teams".</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Message Box Overlay and Content -->
+    <div id="messageBoxOverlay" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center hidden"></div>
+    <div id="messageBox" class="bg-white rounded-xl shadow-2xl p-8 max-w-sm w-full text-center hidden z-50">
+        <p id="messageBoxContent" class="text-gray-800 text-lg mb-6"></p>
+        <button id="messageBoxCloseBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-5 rounded-lg transition-colors">OK</button>
+    </div>
+
+    <script>
+        // --- DOM Element References ---
+        const numParticipantsInput = document.getElementById('numParticipants');
+        const numTeamsInput = document.getElementById('numTeams');
+        const randomModeRadio = document.getElementById('randomMode');
+        const balancedModeRadio = document.getElementById('balancedMode');
+        const participantInputsDiv = document.getElementById('participantInputs');
+        const generateTeamsBtn = document.getElementById('generateTeamsBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const teamsListDiv = document.getElementById('teamsList');
+
+        const messageBox = document.getElementById('messageBox');
+        const messageBoxOverlay = document.getElementById('messageBoxOverlay');
+        const messageBoxContent = document.getElementById('messageBoxContent');
+        const messageBoxCloseBtn = document.getElementById('messageBoxCloseBtn');
+
+        // --- Global State Variables ---
+        // participantData stores the current values from the input fields,
+        // it is updated when updateParticipantInputs() is called.
+        // It's used to remember values when switching modes.
+        let participantsData = []; // Array of { id, name, rating }
+        let currentTeams = []; // Array of team objects
+
+        // --- Utility Functions ---
+
+        /**
+         * Shows a custom message box instead of alert().
+         * @param {string} message The message to display.
+         */
+        function showMessage(message) {
+            messageBoxContent.textContent = message;
+            messageBox.classList.remove('hidden');
+            messageBoxOverlay.classList.remove('hidden');
+        }
+
+        /**
+         * Hides the custom message box.
+         */
+        function hideMessageBox() {
+            messageBox.classList.add('hidden');
+            messageBoxOverlay.classList.add('hidden');
+        }
+
+        /**
+         * Shuffles an array randomly using Fisher-Yates (Knuth) shuffle algorithm.
+         * @param {Array} array The array to shuffle.
+         * @returns {Array} The shuffled array.
+         */
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]]; // Swap elements
+            }
+            return array;
+        }
+
+        /**
+         * Sets the visual star rating for a participant and updates the hidden input.
+         * @param {number} participantIndex The index of the participant (0-based).
+         * @param {number} rating The star rating to set (1-5).
+         */
+        function setStarRating(participantIndex, rating) {
+            // Get the container for the specific participant's stars
+            const starContainer = document.querySelector(`#participantRatingContainer${participantIndex}`);
+            if (!starContainer) return;
+
+            // Get all star icons within this container
+            const stars = starContainer.querySelectorAll('.star-icon');
+            stars.forEach((star, i) => {
+                // Add or remove 'filled' class based on the selected rating
+                if (i < rating) {
+                    star.classList.add('filled');
+                } else {
+                    star.classList.remove('filled');
+                }
+            });
+
+            // Update the hidden input that stores the actual numerical rating
+            const hiddenRatingInput = document.getElementById(`participantRatingHidden${participantIndex}`);
+            if (hiddenRatingInput) {
+                hiddenRatingInput.value = rating;
+            }
+        }
+
+        /**
+         * Updates the participant input fields based on the number of participants.
+         * Adds or removes input fields for name and skill rating (if balanced mode).
+         */
+        function updateParticipantInputs() {
+            const numParticipants = parseInt(numParticipantsInput.value);
+            const isBalancedMode = balancedModeRadio.checked;
+            participantInputsDiv.innerHTML = ''; // Clear existing inputs
+
+            // Capture current data before clearing, to pre-fill if mode changes
+            const currentParticipantData = [];
+            for (let i = 0; i < participantsData.length; i++) {
+                const nameInput = document.getElementById(`participantName${i}`);
+                const hiddenRatingInput = document.getElementById(`participantRatingHidden${i}`);
+                if (nameInput) {
+                    currentParticipantData.push({
+                        name: nameInput.value.trim(),
+                        rating: hiddenRatingInput ? parseInt(hiddenRatingInput.value) : 3 // Default to 3 if not balanced mode or input not found
+                    });
+                }
+            }
+
+            participantsData = []; // Reset participants data array for new inputs
+
+            for (let i = 0; i < numParticipants; i++) {
+                const participantDiv = document.createElement('div');
+                participantDiv.className = 'flex flex-col gap-2 p-3 border border-gray-200 rounded-lg bg-white shadow-sm';
+
+                const nameLabel = document.createElement('label');
+                nameLabel.htmlFor = `participantName${i}`;
+                nameLabel.className = 'text-gray-700 text-sm font-medium';
+                nameLabel.textContent = `Participant ${i + 1} Name:`;
+
+                const nameInput = document.createElement('input');
+                nameInput.type = 'text';
+                nameInput.id = `participantName${i}`;
+                nameInput.placeholder = `Participant ${i + 1}`;
+                nameInput.className = 'w-full p-2 border border-gray-300 rounded-md text-base';
+                // Pre-fill name from previous state if available, otherwise default
+                nameInput.value = currentParticipantData[i]?.name || `Participant ${i + 1}`;
+
+                participantDiv.appendChild(nameLabel);
+                participantDiv.appendChild(nameInput);
+
+                // Initialize participant data for the current index
+                participantsData.push({
+                    id: `p${i + 1}`,
+                    name: nameInput.value, // Use the pre-filled name
+                    rating: currentParticipantData[i]?.rating || 3 // Use pre-filled rating or default to 3
+                });
+
+                if (isBalancedMode) {
+                    const ratingLabel = document.createElement('label');
+                    ratingLabel.htmlFor = `participantRatingContainer${i}`;
+                    ratingLabel.className = 'text-gray-700 text-sm font-medium mt-2';
+                    ratingLabel.textContent = `Rating (1-5 stars):`;
+                    participantDiv.appendChild(ratingLabel);
+
+                    const starContainer = document.createElement('div');
+                    starContainer.id = `participantRatingContainer${i}`;
+                    starContainer.className = 'star-rating flex items-center gap-1';
+                    participantDiv.appendChild(starContainer);
+
+                    // Hidden input to store the actual numerical rating for retrieval
+                    const hiddenRatingInput = document.createElement('input');
+                    hiddenRatingInput.type = 'hidden';
+                    hiddenRatingInput.id = `participantRatingHidden${i}`;
+                    hiddenRatingInput.value = participantsData[i].rating; // Set initial value
+
+                    participantDiv.appendChild(hiddenRatingInput);
+
+
+                    for (let j = 1; j <= 5; j++) {
+                        const starSpan = document.createElement('span');
+                        starSpan.className = 'star-icon';
+                        starSpan.innerHTML = '&#9733;'; // Unicode for a filled star (will be styled as empty or filled)
+                        starSpan.dataset.value = j; // Store the star's numerical value
+                        starContainer.appendChild(starSpan);
+                    }
+
+                    // Event delegation for stars
+                    starContainer.addEventListener('click', (event) => {
+                        const clickedStar = event.target.closest('.star-icon');
+                        if (clickedStar) {
+                            const rating = parseInt(clickedStar.dataset.value);
+                            // Update the rating in participantsData array
+                            participantsData[i].rating = rating;
+                            // Visually update the stars
+                            setStarRating(i, rating);
+                        }
+                    });
+
+                    // Set initial visual rating based on participantsData[i].rating
+                    setStarRating(i, participantsData[i].rating);
+                }
+                participantInputsDiv.appendChild(participantDiv);
+            }
+        }
+
+        /**
+         * Reads the participant data from the input fields.
+         * @returns {Array<Object>} An array of participant objects { id, name, rating }.
+         */
+        function getParticipantsData() {
+            const numParticipants = parseInt(numParticipantsInput.value);
+            const isBalancedMode = balancedModeRadio.checked;
+            const participants = [];
+
+            for (let i = 0; i < numParticipants; i++) {
+                const nameInput = document.getElementById(`participantName${i}`);
+                const hiddenRatingInput = document.getElementById(`participantRatingHidden${i}`);
+
+                const name = nameInput.value.trim() || `Participant ${i + 1}`;
+                let rating = 0;
+
+                if (isBalancedMode) {
+                    rating = parseInt(hiddenRatingInput.value);
+                    if (isNaN(rating) || rating < 1 || rating > 5) {
+                        // This case should be less likely with star selector, but keep for robustness
+                        showMessage(`There was an issue with the rating for ${name}. Please try again.`);
+                        return null; // Indicate error
+                    }
+                }
+                participants.push({ id: `p${i + 1}`, name: name, rating: rating });
+            }
+            return participants;
+        }
+
+        /**
+         * Displays the generated teams in the output area.
+         * @param {Array<Array<Object>>} teams An array where each element is a team,
+         * and each team is an array of participant objects.
+         * @param {boolean} isBalancedMode True if teams were balanced, false if random.
+         */
+        function displayTeams(teams, isBalancedMode) {
+            teamsListDiv.innerHTML = ''; // Clear previous teams
+
+            if (teams.length === 0 || teams.every(team => team.length === 0)) {
+                teamsListDiv.innerHTML = '<p class="text-center text-gray-500 italic">No participants to form teams.</p>';
+                return;
+            }
+
+            teams.forEach((team, index) => {
+                const teamDiv = document.createElement('div');
+                teamDiv.className = 'bg-white p-5 rounded-lg shadow-md border border-blue-100 transform transition-transform duration-200 hover:scale-[1.02]';
+
+                const teamTitle = document.createElement('h3');
+                teamTitle.className = 'text-xl font-semibold text-blue-700 mb-3';
+                teamTitle.textContent = `Team ${index + 1}`;
+                teamDiv.appendChild(teamTitle);
+
+                const participantList = document.createElement('ul');
+                participantList.className = 'list-disc list-inside text-gray-700';
+
+                if (team.length === 0) {
+                    const emptyItem = document.createElement('li');
+                    emptyItem.textContent = 'No members';
+                    participantList.appendChild(emptyItem);
+                } else {
+                    team.forEach(participant => {
+                        const listItem = document.createElement('li');
+                        listItem.textContent = participant.name;
+                        if (isBalancedMode) {
+                            listItem.textContent += ` (Rating: ${participant.rating} ⭐)`;
+                        }
+                        participantList.appendChild(listItem);
+                    });
+                }
+                teamDiv.appendChild(participantList);
+
+                if (isBalancedMode) {
+                    const totalRating = team.reduce((sum, p) => sum + p.rating, 0);
+                    const ratingSumPara = document.createElement('p');
+                    ratingSumPara.className = 'mt-3 text-blue-600 font-bold text-lg';
+                    ratingSumPara.textContent = `Total Rating: ${totalRating} ⭐`;
+                    teamDiv.appendChild(ratingSumPara);
+                }
+                teamsListDiv.appendChild(teamDiv);
+            });
+        }
+
+        /**
+         * Generates random teams. Participants are shuffled and distributed evenly.
+         */
+        function generateRandomTeams() {
+            const participants = getParticipantsData();
+            if (!participants) return; // Error in getting data
+
+            const numTeams = parseInt(numTeamsInput.value);
+            if (numTeams <= 0) {
+                showMessage("Number of teams must be at least 1.");
+                return;
+            }
+            if (numTeams > participants.length && participants.length > 0) {
+                 showMessage("Number of teams cannot be more than the number of participants (unless there are no participants).");
+                 return;
+            }
+            if (participants.length === 0 && numTeams > 0) {
+                showMessage("Please add participants to generate teams.");
+                return;
+            }
+
+
+            const shuffledParticipants = shuffleArray([...participants]); // Create a shallow copy to shuffle
+
+            const teams = Array.from({ length: numTeams }, () => []); // Initialize empty teams
+
+            // Distribute participants
+            shuffledParticipants.forEach((participant, index) => {
+                const teamIndex = index % numTeams;
+                teams[teamIndex].push(participant);
+            });
+
+            currentTeams = teams; // Store for potential re-roll
+            displayTeams(teams, false);
+        }
+
+        /**
+         * Generates balanced teams using a greedy approach.
+         * Participants are sorted by rating and assigned to the team with the lowest current total rating.
+         * To allow "redo" for multiple equally balanced combinations, a slight shuffle is applied to participants
+         * before the greedy assignment if a re-roll is intended.
+         * @param {boolean} isRedo Indicates if this is a re-roll to try a slightly different balanced combination.
+         */
+        function generateBalancedTeams(isRedo = false) {
+            let participants = getParticipantsData();
+            if (!participants) return; // Error in getting data
+
+            const numTeams = parseInt(numTeamsInput.value);
+            if (numTeams <= 0) {
+                showMessage("Number of teams must be at least 1.");
+                return;
+            }
+            if (numTeams > participants.length && participants.length > 0) {
+                 showMessage("Number of teams cannot be more than the number of participants (unless there are no participants).");
+                 return;
+            }
+            if (participants.length === 0 && numTeams > 0) {
+                showMessage("Please add participants to generate teams.");
+                return;
+            }
+
+            // If it's a redo, slightly shuffle participants to potentially get a different greedy outcome.
+            // This is a heuristic to address "multiple equally balanced combinations" without complex algorithms.
+            if (isRedo) {
+                participants = shuffleArray([...participants]);
+            }
+
+            // Sort participants by rating in descending order for the greedy approach
+            participants.sort((a, b) => b.rating - a.rating);
+
+            // Initialize teams with a structure to track total rating
+            const teams = Array.from({ length: numTeams }, () => ({
+                players: [],
+                totalRating: 0
+            }));
+
+            // Greedy assignment: assign player to the team with the lowest current total rating
+            participants.forEach(participant => {
+                // Find the team with the lowest total rating
+                let targetTeamIndex = 0;
+                for (let i = 1; i < numTeams; i++) {
+                    if (teams[i].totalRating < teams[targetTeamIndex].totalRating) {
+                        targetTeamIndex = i;
+                    }
+                }
+                teams[targetTeamIndex].players.push(participant);
+                teams[targetTeamIndex].totalRating += participant.rating;
+            });
+
+            // Extract just the player arrays for display
+            const teamsForDisplay = teams.map(team => team.players);
+            currentTeams = teamsForDisplay; // Store for potential re-roll
+            displayTeams(teamsForDisplay, true);
+        }
+
+        /**
+         * Main function to handle team generation based on selected mode.
+         * @param {boolean} isRedo Flag to indicate if this is a redo action.
+         */
+        function handleGenerateTeams(isRedo = false) {
+            const numParticipants = parseInt(numParticipantsInput.value);
+            const numTeams = parseInt(numTeamsInput.value);
+
+            if (numParticipants < 1) {
+                showMessage("Please enter at least 1 participant.");
+                return;
+            }
+            if (numTeams < 1) {
+                showMessage("Please enter at least 1 team.");
+                return;
+            }
+            if (numTeams > numParticipants && numParticipants > 0) {
+                showMessage("Number of teams cannot be more than the number of participants (unless there are no participants).");
+                return;
+            }
+
+            if (randomModeRadio.checked) {
+                generateRandomTeams();
+            } else if (balancedModeRadio.checked) {
+                generateBalancedTeams(isRedo);
+            }
+        }
+
+        /**
+         * Resets all inputs and clears the team output.
+         */
+        function resetApp() {
+            numParticipantsInput.value = 5;
+            numTeamsInput.value = 2;
+            randomModeRadio.checked = true; // Default to random mode
+            participantInputsDiv.innerHTML = '<p class="text-center text-gray-500 italic">Configure participants above to see their inputs here.</p>'; // Clear inputs
+            teamsListDiv.innerHTML = '<p class="text-center text-gray-500 italic">No teams generated yet. Enter details and click "Generate Teams".</p>';
+            participantsData = []; // Clear stored participant data
+            currentTeams = []; // Clear current teams
+            updateParticipantInputs(); // Re-render initial participant inputs
+        }
+
+        // --- Event Listeners ---
+        numParticipantsInput.addEventListener('input', updateParticipantInputs);
+        randomModeRadio.addEventListener('change', updateParticipantInputs);
+        balancedModeRadio.addEventListener('change', updateParticipantInputs);
+        generateTeamsBtn.addEventListener('click', () => handleGenerateTeams(false)); // Initial generation is not a redo
+
+        // If the current mode is random or a balanced mode where there could be multiple equally balanced combinations,
+        // the user can click "Generate Teams" again to get a different outcome.
+        // For the balanced mode, this will re-run the greedy algorithm with a slightly shuffled input.
+        // For the random mode, it will simply re-shuffle and redistribute.
+
+        resetBtn.addEventListener('click', resetApp);
+        messageBoxCloseBtn.addEventListener('click', hideMessageBox);
+        messageBoxOverlay.addEventListener('click', hideMessageBox); // Close on overlay click
+
+        // --- Initial Load ---
+        document.addEventListener('DOMContentLoaded', () => {
+            updateParticipantInputs(); // Populate initial participant fields
+        });
+
+    </script>
+</body>
+</html>
